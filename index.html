@@ -1,0 +1,186 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>reveal.js</title>
+
+		<link rel="stylesheet" href="css/reset.css">
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/black.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/monokai.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section><h1 style="color: pink">Scheduler</h1></section>
+				<section>
+					<section><h3>Bhavdeep Dhanjal</h1></section>
+					<section>
+						<p>github: alivenotions</p>
+						<p>twitter: bhavdeepdhanjal</p>
+						<p>mail: dhanjalbhavdeep@gmail.com</p>
+					</section>
+				</section>
+				<section>
+					<section><h3 style="color: pink">What this talk is about?</h3></section>
+					<section>
+						<p>An introduction to very internal topics</p>
+						<p >Making you all interested in reading source code</p>
+						<p >Sharing what I've been learning on my own</p>
+						<p >Scheduler</p>
+					</section>
+				</section>
+				<section>
+					<section><h3 style="color: pink">What is scheduling?</h3></section>
+					<section>
+						<p>Scheduling is the way work is assigned to somebody that will do the work.</p>
+						<p >This can be done to optimize various things.</p>
+					</section>
+				</section>
+				<section>
+					<section><h3 style="color: pink">Does the browser need a scheduler?</h3></section>
+					<section>
+						<p style="color: rgb(194, 129, 255)">Why don't we make our code run fast?</p>
+						<p >Our dreams are bigger than our processors</p>
+					</section>
+					<section>
+						<p style="color: rgb(194, 129, 255)">Why don't we let things be just as they are?</p>
+						<p >Too many updates can cause wasted renders</p>
+						<p >Long updates can cause frames to drop</p>
+						<p >FIFO is not always that cool</p>
+					</section>
+				</section>
+				<section>
+					<section><h3 style="color: pink">How does it fit in React?</h3></section>
+					<section>Scheduling is the way a unit of work is assigned to somebody that will do the work.</section>
+				</section>
+				<section>
+					<section>
+						<p style="color: rgb(194, 129, 255)">What is a unit of work for React?</p>
+					</section>
+					<section><h3>Fiber</h3></section>
+					<section>Fiber is a data structure that represents work to be done on a component or work that was done</section>
+					<section>It allows the scheduler to control when to render something and when to yield for some other event</section>
+					<section>Let's go to <span style="color: rgb(194, 129, 255)">ReactFiber.js</span></section>
+				</section>
+				<section>
+					<section><h3 style="color: pink">Fiber</h3></section>
+					<section>
+						<p>It's a tree mapped to your components with some additional properties</p>
+						<p >Activities during reconciliation is called work</p>
+						<p >Unlike elements, fibers aren't recreated and are mutable</p>
+						<p >Allows the architecture to run in two phases: render and commit</p>
+					</section>
+				</section>
+				<section>
+					<section><h3 style="color: pink">Fiber: Render phase</h3></section>
+					<section>
+						<p>Work in progress tree (think of it as a draft)</p>
+						<p >Caused by updates to components</p>
+						<p >Fiber tree is marked with effects</p>
+						<p >Can be async</p>
+					</section>
+					<section>
+						<p style="color: rgb(194, 129, 255)">Look at ReactFiberWorkLoop.js</p>
+						<p>performUnitOfWork</p>
+						<p>beginWork</p>
+						<p>completeUnitOfWork</p>
+						<p>completeWork</p>
+					</section>
+				</section>
+				<section>
+					<section><h3 style="color: pink">Fiber: Commit phase</h3></section>
+					<section>
+						<p>Synchronously applies the fiber nodes marked with effects to its instances</p>
+					</section>
+					<section>
+						<p style="color: rgb(194, 129, 255)">Look at ReactFiberCommitWork.js</p>
+					</section>
+				</section>
+				<section>
+					<section>Scheduler assigns priorities to work and can choose what chunk of work should be executed when</section>
+					<section>If a higher priority task is fired whilst a lower priority one is running, the latter is suspended to be run later</section>
+					<section>
+						<h3>Priorities</h3>
+						<p>Immediate(Synchronous tasks)</p>
+						<p>User Blocking(250ms timeout)</p>
+						<p>Normal(5s timeout)</p>
+						<p>Low (10s timeout)</p>
+						<p>Idle (no timeout)</p>
+					</section>
+				</section>
+				<section>
+					<section>Why don't they leverage APIs from the browser like requestIdleCallback?</section>
+					<section>It waits for an idle period before executing the associated work</section>
+				</section>
+				<section>
+					<section><h3 style="color: pink">How scheduler works (currently)</h3></section>
+					<section><ol>
+						<li>Store all work callbacks in a list ordered by expiration time</li>
+						<li >Register a callback that is run after the next frame is drawn by the browser</li>
+						<li >Achieved by postMessage inside a requestAnimationFrame callback</li>
+						<li >Called right after the frame is rendered and it executes as many of the registered callbacks as possible</li>
+					</ol></section>
+					<section>Control is either yielded based on isInputPending but the scheduler still maintains a max frame length after which it yields regardless</section>
+					<section>All tasks that go through the scheduler, go through this function(ReactFiberWorkLoop/performConcurrenWorkOnRoot)</section>
+				</section>
+				<section>
+					<section><h3 style="color: pink">Limitation</h3></section>
+					<section><ul>
+						<li>Scheduler doesn't have access to lower level APIs like GC or rendering APIs</li>
+						<li>Multiple scheduling mechanisms can fight within each other</li>
+					</ul></section>
+				</section>
+				<section>
+					<section><h3 style="color: pink">Work in browserland</h3></section>
+					<section>
+						<ul>
+							<li>When to yield to the browser? <p >scheduler.isInputPending()</p></li>
+							<li >When to regain control <p >scheduler.yield()</p></li>
+							<li >Coordination between cooperating actors <p >A standardized shared notion of priority</p></li>
+							<li >Standard set of scheduling APIs<p >Post task api</p></li>
+						</ul>
+					</section>
+					<section><a>https://github.com/WICG/main-thread-scheduling</a></section>
+				</section>
+				<section>
+						<section><h3>Thank you</h1></section>
+						<section>
+							<p>github: alivenotions</p>
+							<p>twitter: bhavdeepdhanjal</p>
+							<p>mail: dhanjalbhavdeep@gmail.com</p>
+						</section>
+					</section>
+			</div>
+		</div>
+
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true }
+				]
+			});
+		</script>
+	</body>
+</html>
